@@ -8164,8 +8164,8 @@ static int nl80211_get_reg_do(struct sk_buff *skb, struct genl_info *info)
 
 		regdom = get_wiphy_regdom(wiphy);
 
-		/* a self-managed-reg device must have a private regdom */
-		if (WARN_ON(!regdom && self_managed)) {
+		/* a self-managed-reg device should have a private regdom */
+		if (!regdom && self_managed) {
 			err = -EINVAL;
 			goto nla_put_failure_rcu;
 		}
