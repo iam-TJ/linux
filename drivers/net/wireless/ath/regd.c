@@ -16,6 +16,7 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/export.h>
 #include <net/cfg80211.h>
@@ -680,6 +681,10 @@ static void ath_regd_sanitize(struct ath_regulatory *reg)
 	reg->current_rd = 0x64;
 }
 
+ushort ath_country_default = CTRY_UNITED_KINGDOM;
+module_param_named(country_default, ath_country_default, ushort, 0644);
+MODULE_PARM_DESC(country_default, "Default country when firmware is unset");
+
 static int __ath_regd_init(struct ath_regulatory *reg)
 {
 	struct country_code_to_enum_rd *country = NULL;
@@ -704,7 +709,7 @@ static int __ath_regd_init(struct ath_regulatory *reg)
 	    regdmn == CTRY_DEFAULT) {
 		printk(KERN_DEBUG "ath: EEPROM indicates default "
 		       "country code should be used\n");
-		reg->country_code = CTRY_UNITED_STATES;
+		reg->country_code = ath_country_default;
 	}
 
 	if (reg->country_code == CTRY_DEFAULT) {
