@@ -572,6 +572,7 @@ fw_get_filesystem_firmware(struct device *device, struct fw_priv *fw_priv,
 			fw_priv->size = size;
 		}
 		fw_state_done(fw_priv);
+		dev_info(device, "Firmware loaded: %s\n", fw_priv->fw_name);
 		break;
 	}
 	__putname(path);
@@ -1581,6 +1582,7 @@ static int __init firmware_class_init(void)
 	if (ret)
 		goto out;
 
+	pr_info("Firmware loaded: %s\n", "reporting");
 	return register_sysfs_loader();
 
 out:

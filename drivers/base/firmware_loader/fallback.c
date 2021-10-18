@@ -163,6 +163,9 @@ static int fw_load_from_user_helper(struct firmware *firmware,
 out_unlock:
 	usermodehelper_read_unlock();
 
+	if (!ret)
+		dev_info(device, "Firmware loaded: %s\n", name);
+
 	return ret;
 }
 
