@@ -206,7 +206,7 @@ Description: Linux kernel headers for $version on $debarch
 EOF
 fi
 
-if is_enabled CONFIG_DEBUG_INFO; then
+if [ -z "$BUILD_DEBUG_PKG_DISABLE" ] && is_enabled CONFIG_DEBUG_INFO; then
 cat <<EOF >> debian/control
 
 Package: linux-image-$version-dbg
@@ -241,6 +241,8 @@ clean:
 
 binary: binary-arch
 EOF
-chmod +x debian/rules
+if ! [ -x debian/rules ]; then
+  chmod +x debian/rules
+fi
 
 exit 0

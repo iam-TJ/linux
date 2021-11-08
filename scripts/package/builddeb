@@ -220,7 +220,7 @@ fi
 
 create_package "$packagename" "$tmpdir"
 
-if [ -n "$BUILD_DEBUG" ] ; then
+if [ -z "$BUILD_DEBUG_PKG_DISABLE" -a -n "$BUILD_DEBUG" ]; then
 	# Build debug package
 	# Different tools want the image in different locations
 	# perf
