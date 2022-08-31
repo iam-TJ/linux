@@ -270,6 +270,7 @@ efi_status_t allocate_new_fdt_and_exit_boot(void *handle,
 		efi_err("Unable to retrieve UEFI memory map.\n");
 		return status;
 	}
+	my_efi_info("allocate_new_fdt...() 1: map->key=0x%lx\n", *map.key_ptr);
 
 	efi_info("Exiting boot services...\n");
 
@@ -287,6 +288,7 @@ efi_status_t allocate_new_fdt_and_exit_boot(void *handle,
 	status = efi_get_memory_map(&map);
 	if (status != EFI_SUCCESS)
 		goto fail_free_new_fdt;
+	my_efi_info("allocate_new_fdt...() 2: map->key=0x%lx\n", *map.key_ptr);
 
 	status = update_fdt((void *)fdt_addr, fdt_size,
 			    (void *)*new_fdt_addr, MAX_FDT_SIZE, cmdline_ptr,

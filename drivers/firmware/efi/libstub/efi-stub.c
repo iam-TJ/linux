@@ -109,6 +109,13 @@ static u32 get_supported_rt_services(void)
 
 	return supported;
 }
+static int map_changed_count = 0;
+
+void __efiapi event_memory_map_changed(efi_event_t event, void *context)
+{
+	if (++map_changed_count % 4 == 0)
+		efi_info(">> Memory Map Changed 0x%x <<\n", map_changed_count);
+}
 
 /*
  * EFI entry point for the arm/arm64 EFI stubs.  This is the entrypoint
@@ -137,6 +144,14 @@ efi_status_t __efiapi efi_pe_entry(efi_handle_t handle,
 	struct screen_info *si;
 	efi_properties_table_t *prop_tbl;
 
+	/* values for CreateEventEx - don't want to be notified */
+	u32 event_type = EFI_EVT_NOTIFY_SIGNAL;
+	unsigned long event_tpl = EFI_TPL_NOTIFY;
+	efi_event_notify_t event_nfunc = event_memory_map_changed;
+	void *event_context = NULL;
+	efi_guid_t event_guid = EFI_EVT_MEMORY_MAP_CHANGE;
+	efi_event_t event_group_event;
+
 	efi_system_table = sys_table_arg;
 
 	/* Check if we were booted by the EFI firmware */
@@ -159,6 +174,16 @@ efi_status_t __efiapi efi_pe_entry(efi_handle_t handle,
 	if (status != EFI_SUCCESS) {
 		efi_err("Failed to get loaded image protocol\n");
 		goto fail;
+	}
+
+	if (1) {
+		status = efi_bs_call(create_event_ex,	event_type,
+							event_tpl,
+							event_nfunc,
+							event_context,
+							&event_guid,
+							&event_group_event);
+		efi_info("create_event_ex (EFI_EVT_MEMORY_MAP_CHANGE) = 0x%lx\n", status);
 	}
 
 	/*

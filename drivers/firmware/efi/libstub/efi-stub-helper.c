@@ -416,6 +416,15 @@ char *efi_convert_cmdline(efi_loaded_image_t *image, int *cmd_line_len)
 	return (char *)cmdline_addr;
 }
 
+
+/* using efi_info in case efi=debug isn't set on cmdline  */
+/* set to 0 to disable all logs (they may be causing the mmap key increments  */
+int my_efi_info_debug = 0;
+void __efiapi event_notified(efi_event_t event, void *context)
+{
+	efi_info(">> event_notified() ! <<\n");
+}
+
 /**
  * efi_exit_boot_services() - Exit boot services
  * @handle:	handle of the exiting image
@@ -432,26 +441,92 @@ char *efi_convert_cmdline(efi_loaded_image_t *image, int *cmd_line_len)
  *
  * Return:	status code
  */
+static int ebs_count;
+static unsigned long ebs_key;
+efi_status_t get_memmap(struct efi_boot_memmap *map)
+{
+	return efi_bs_call(get_memory_map,
+			     map->map_size,
+			     *map->map,
+			     map->key_ptr,
+			     map->desc_size,
+			     map->desc_ver);
+}
 efi_status_t efi_exit_boot_services(void *handle,
 				    struct efi_boot_memmap *map,
 				    void *priv,
 				    efi_exit_boot_map_processing priv_func)
 {
 	efi_status_t status;
+	int call_count=0;
+	efi_event_t signal = (efi_event_t)EFI_EVT_SIGNAL_EXIT_BOOT_SERVICES;
+
+	/* values for CreateEventEx - don't want to be notified */
+	u32 event_type = EFI_EVT_NOTIFY_SIGNAL;
+	unsigned long event_tpl = EFI_TPL_NOTIFY;
+	efi_event_notify_t event_nfunc = event_notified;
+	void *event_context = NULL;
+	efi_guid_t event_guid = EFI_EVT_GROUP_EXIT_BOOT_SERVICES;
+	efi_event_t event_group_event;
 
 	status = efi_get_memory_map(map);
 
 	if (status != EFI_SUCCESS)
 		goto fail;
 
+
+	my_efi_info("EFI_MMAP_NR_SLACK_SLOTS=%d\n", EFI_MMAP_NR_SLACK_SLOTS);
+	my_efi_info("efi_exit_boot_services() %d key=0x%lx map_size=0x%lx desc_size=0x%lx buff_size=0x%lx\n", ++call_count, *map->key_ptr,*map->map_size, *map->desc_size, *map->buff_size);
 	status = priv_func(map, priv);
 	if (status != EFI_SUCCESS)
 		goto free_map;
 
+	status = get_memmap(map);
+	my_efi_info("efi_exit_boot_services() %d key=0x%lx map_size=0x%lx desc_size=0x%lx buff_size=0x%lx\n", ++call_count, *map->key_ptr,*map->map_size, *map->desc_size, *map->buff_size);
 	if (efi_disable_pci_dma)
 		efi_pci_disable_bridge_busmaster();
 
-	status = efi_bs_call(exit_boot_services, handle, *map->key_ptr);
+	if (0) {
+		my_efi_info(" doing asm(\"msr daifset, #3\"); and then calling exit_boot_services\n");
+		asm("msr daifset, #3");
+	}
+	status = get_memmap(map);
+	my_efi_info("efi_exit_boot_services() %d key=0x%lx map_size=0x%lx desc_size=0x%lx buff_size=0x%lx\n", ++call_count, *map->key_ptr,*map->map_size, *map->desc_size, *map->buff_size);
+
+	if (0) {
+		status = efi_bs_call(signal_event, signal);
+		my_efi_info("signal_event(EFI_EVT_SIGNAL_EXIT_BOOT_SERVICES) = 0x%lx\n", status);
+	}
+	if (1) {
+		status = efi_bs_call(create_event_ex,	event_type,
+							event_tpl,
+							event_nfunc,
+							event_context,
+							&event_guid,
+							&event_group_event);
+		my_efi_info("create_event_ex (EFI_EVT_GROUP_EXIT_BOOT_SERVICES) = 0x%lx\n", status);
+		if (status == EFI_SUCCESS) {
+			status = efi_bs_call(signal_event, event_group_event);
+			my_efi_info("signal_event(EFI_EVT_GROUP_SIGNAL_EXIT_BOOT_SERVICES) = 0x%lx\n", status);
+		}
+	}
+	my_efi_info("Calling exit_boot_services now\n");
+	ebs_count = 0;
+	ebs_key = *map->key_ptr;
+	do {
+		status = efi_bs_call(exit_boot_services, handle, ebs_key);
+		++ebs_count;
+		++ebs_key;
+		if (ebs_count % 8 == 0)
+			efi_info(" exit_boot_services call %d with key 0x%lx (started from 0x%lx)) status = 0x%lx\n", ebs_count, ebs_key, *map->key_ptr, status);
+		
+	} while (status != EFI_SUCCESS);
+	efi_info(" exit_boot_services call %d with key 0x%lx status = 0x%lx\n", ebs_count, ebs_key, status);
+
+	efi_info("efi_exit_boot_services() %d key=0x%lx map_size=0x%lx desc_size=0x%lx buff_size=0x%lx\n", ++call_count, *map->key_ptr,*map->map_size, *map->desc_size, *map->buff_size);
+
+	efi_info("Stalling for 5 seconds\n");
+	efi_bs_call(stall, 5 * EFI_USEC_PER_SEC);
 
 	if (status == EFI_INVALID_PARAMETER) {
 		/*
@@ -484,8 +559,11 @@ efi_status_t efi_exit_boot_services(void *handle,
 		if (status != EFI_SUCCESS)
 			goto fail;
 
+	my_efi_info("RETRY efi_exit_boot_services() %d key=0x%lx map_size=0x%lx desc_size=0x%lx buff_size=0x%lx\n", ++call_count, *map->key_ptr,*map->map_size, *map->desc_size, *map->buff_size);
 		status = efi_bs_call(exit_boot_services, handle, *map->key_ptr);
+		efi_info(" exit_boot_services call 2 status = 0x%lx\n", status);
 	}
+	efi_bs_call(stall, 10 * EFI_USEC_PER_SEC);
 
 	/* exit_boot_services() was called, thus cannot free */
 	if (status != EFI_SUCCESS)
@@ -751,3 +829,4 @@ efi_status_t efi_wait_for_key(unsigned long usec, efi_input_key_t *key)
 
 	return status;
 }
+
