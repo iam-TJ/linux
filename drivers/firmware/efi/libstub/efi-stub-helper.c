@@ -462,6 +462,10 @@ efi_status_t efi_exit_boot_services(void *handle,
 	if (status != EFI_SUCCESS)
 		goto free_map;
 
+	if (0) {
+		my_efi_info(" doing asm(\"msr daifset, #3\"); and then calling exit_boot_services\n");
+		asm("msr daifset, #3");
+	}
 	status = get_memmap(map);
 	my_efi_info("efi_exit_boot_services() %d key=0x%lx map_size=0x%lx desc_size=0x%lx buff_size=0x%lx\n", ++call_count, *map->key_ptr,*map->map_size, *map->desc_size, *map->buff_size);
 	if (efi_disable_pci_dma)
