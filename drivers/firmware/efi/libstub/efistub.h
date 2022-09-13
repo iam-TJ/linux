@@ -61,6 +61,12 @@ efi_status_t __efiapi efi_pe_entry(efi_handle_t handle,
 	efi_printk(KERN_ERR "ERROR: " fmt, ##__VA_ARGS__)
 #define efi_debug(fmt, ...) \
 	efi_printk(KERN_DEBUG "DEBUG: " fmt, ##__VA_ARGS__)
+extern int my_efi_info_debug;
+#define my_efi_info(fmt, ...) \
+	do { \
+		if (my_efi_info_debug) \
+			efi_printk(KERN_INFO fmt, ##__VA_ARGS__); \
+	} while (0);
 
 #define efi_printk_once(fmt, ...) 		\
 ({						\
