@@ -1,3 +1,4 @@
+
 // SPDX-License-Identifier: GPL-2.0
 /*
  * Helper functions used by the EFI stub on multiple
@@ -452,6 +453,8 @@ efi_status_t efi_exit_boot_services(void *handle,
 
 	if (status != EFI_SUCCESS)
 		goto fail;
+
+	my_efi_info("EFI_MMAP_NR_SLACK_SLOTS=%d\n", EFI_MMAP_NR_SLACK_SLOTS);
 
 	status = priv_func(map, priv);
 	if (status != EFI_SUCCESS)
