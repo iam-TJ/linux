@@ -429,6 +429,16 @@ void __efiapi event_notified(efi_event_t event, void *context)
 static int ebs_count;
 static unsigned long ebs_key;
 
+efi_status_t get_memmap(struct efi_boot_memmap *map)
+{
+	return efi_bs_call(get_memory_map,
+			     map->map_size,
+			     *map->map,
+			     map->key_ptr,
+			     map->desc_size,
+			     map->desc_ver);
+}
+
 /**
  * efi_exit_boot_services() - Exit boot services
  * @handle:	handle of the exiting image
