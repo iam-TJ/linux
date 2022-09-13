@@ -448,6 +448,7 @@ efi_status_t efi_exit_boot_services(void *handle,
 				    efi_exit_boot_map_processing priv_func)
 {
 	efi_status_t status;
+	int call_count=0;
 
 	status = efi_get_memory_map(map);
 
@@ -455,15 +456,19 @@ efi_status_t efi_exit_boot_services(void *handle,
 		goto fail;
 
 	my_efi_info("EFI_MMAP_NR_SLACK_SLOTS=%d\n", EFI_MMAP_NR_SLACK_SLOTS);
+	my_efi_info("efi_exit_boot_services() %d key=0x%lx map_size=0x%lx desc_size=0x%lx buff_size=0x%lx\n", ++call_count, *map->key_ptr,*map->map_size, *map->desc_size, *map->buff_size);
 
 	status = priv_func(map, priv);
 	if (status != EFI_SUCCESS)
 		goto free_map;
 
+	status = get_memmap(map);
+	my_efi_info("efi_exit_boot_services() %d key=0x%lx map_size=0x%lx desc_size=0x%lx buff_size=0x%lx\n", ++call_count, *map->key_ptr,*map->map_size, *map->desc_size, *map->buff_size);
 	if (efi_disable_pci_dma)
 		efi_pci_disable_bridge_busmaster();
 
 	status = efi_bs_call(exit_boot_services, handle, *map->key_ptr);
+	my_efi_info(" exit_boot_services() %d key=0x%lx status=0x%lx\n", call_count, *map->key_ptr, status);
 
 	if (status == EFI_INVALID_PARAMETER) {
 		/*
@@ -496,8 +501,11 @@ efi_status_t efi_exit_boot_services(void *handle,
 		if (status != EFI_SUCCESS)
 			goto fail;
 
+		my_efi_info("RETRY efi_exit_boot_services() %d key=0x%lx map_size=0x%lx desc_size=0x%lx buff_size=0x%lx\n", ++call_count, *map->key_ptr,*map->map_size, *map->desc_size, *map->buff_size);
 		status = efi_bs_call(exit_boot_services, handle, *map->key_ptr);
+		my_efi_info(" exit_boot_services RETRY status = 0x%lx\n", status);
 	}
+	efi_bs_call(stall, 10 * EFI_USEC_PER_SEC);
 
 	/* exit_boot_services() was called, thus cannot free */
 	if (status != EFI_SUCCESS)
