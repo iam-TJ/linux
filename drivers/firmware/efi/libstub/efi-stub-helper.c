@@ -426,6 +426,9 @@ void __efiapi event_notified(efi_event_t event, void *context)
        my_efi_info(">> event_notified() ! <<\n");
 }
 
+static int ebs_count;
+static unsigned long ebs_key;
+
 /**
  * efi_exit_boot_services() - Exit boot services
  * @handle:	handle of the exiting image
@@ -501,6 +504,25 @@ efi_status_t efi_exit_boot_services(void *handle,
 
 	status = efi_bs_call(exit_boot_services, handle, *map->key_ptr);
 	my_efi_info(" exit_boot_services() %d key=0x%lx status=0x%lx\n", call_count, *map->key_ptr, status);
+
+	if (0) {
+		my_efi_info(" exit_boot_services() %d key=0x%lx status=0x%lx\n", call_count, *map->key_ptr, status);
+
+		ebs_count = 0;
+		ebs_key = *map->key_ptr;
+		do {
+			status = efi_bs_call(exit_boot_services, handle, ebs_key);
+			++ebs_count;
+			++ebs_key;
+			if (ebs_count % 8 == 0)
+				efi_info(" exit_boot_services call %d with key 0x%lx (started from 0x%lx)) status = 0x%lx\n", ebs_count, ebs_key, *map->key_ptr, status);
+
+		} while (status != EFI_SUCCESS && ebs_count < 1000);
+		efi_info(" exit_boot_services call %d with key 0x%lx status = 0x%lx\n", ebs_count, ebs_key, status);
+	}
+
+	my_efi_info("Stalling for 5 seconds\n");
+	efi_bs_call(stall, 5 * EFI_USEC_PER_SEC);
 
 	if (status == EFI_INVALID_PARAMETER) {
 		/*
