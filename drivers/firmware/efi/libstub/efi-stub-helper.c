@@ -449,6 +449,7 @@ efi_status_t efi_exit_boot_services(void *handle,
 {
 	efi_status_t status;
 	int call_count=0;
+	efi_event_t signal = (efi_event_t)EFI_EVT_SIGNAL_EXIT_BOOT_SERVICES;
 
 	status = efi_get_memory_map(map);
 
@@ -470,6 +471,11 @@ efi_status_t efi_exit_boot_services(void *handle,
 	my_efi_info("efi_exit_boot_services() %d key=0x%lx map_size=0x%lx desc_size=0x%lx buff_size=0x%lx\n", ++call_count, *map->key_ptr,*map->map_size, *map->desc_size, *map->buff_size);
 	if (efi_disable_pci_dma)
 		efi_pci_disable_bridge_busmaster();
+
+	if (0) {
+		status = efi_bs_call(signal_event, signal);
+		my_efi_info("signal_event(EFI_EVT_SIGNAL_EXIT_BOOT_SERVICES) = 0x%lx\n", status);
+	}
 
 	status = efi_bs_call(exit_boot_services, handle, *map->key_ptr);
 	my_efi_info(" exit_boot_services() %d key=0x%lx status=0x%lx\n", call_count, *map->key_ptr, status);
