@@ -451,6 +451,14 @@ efi_status_t efi_exit_boot_services(void *handle,
 	int call_count=0;
 	efi_event_t signal = (efi_event_t)EFI_EVT_SIGNAL_EXIT_BOOT_SERVICES;
 
+	/* values for CreateEventEx */
+	u32 event_type = EFI_EVT_NOTIFY_SIGNAL;
+	unsigned long event_tpl = EFI_TPL_NOTIFY;
+	efi_event_notify_t event_nfunc = event_notified;
+	void *event_context = NULL;
+	efi_guid_t event_guid = EFI_EVT_GROUP_EXIT_BOOT_SERVICES;
+	efi_event_t event_group_event;
+
 	status = efi_get_memory_map(map);
 
 	if (status != EFI_SUCCESS)
@@ -475,6 +483,20 @@ efi_status_t efi_exit_boot_services(void *handle,
 	if (0) {
 		status = efi_bs_call(signal_event, signal);
 		my_efi_info("signal_event(EFI_EVT_SIGNAL_EXIT_BOOT_SERVICES) = 0x%lx\n", status);
+	}
+
+	if (0) {
+		status = efi_bs_call(create_event_ex,	event_type,
+							event_tpl,
+							event_nfunc,
+							event_context,
+							&event_guid,
+							&event_group_event);
+		my_efi_info("create_event_ex (EFI_EVT_GROUP_EXIT_BOOT_SERVICES) = 0x%lx\n", status);
+		if (status == EFI_SUCCESS) {
+			status = efi_bs_call(signal_event, event_group_event);
+			my_efi_info("signal_event(EFI_EVT_GROUP_SIGNAL_EXIT_BOOT_SERVICES) = 0x%lx\n", status);
+		}
 	}
 
 	status = efi_bs_call(exit_boot_services, handle, *map->key_ptr);
