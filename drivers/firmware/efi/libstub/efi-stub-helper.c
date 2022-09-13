@@ -416,6 +416,9 @@ char *efi_convert_cmdline(efi_loaded_image_t *image, int *cmd_line_len)
 	return (char *)cmdline_addr;
 }
 
+/* set to 0 to disable all logs (they may be causing the mmap key increments  */
+int my_efi_info_debug = 1;
+
 /**
  * efi_exit_boot_services() - Exit boot services
  * @handle:	handle of the exiting image
