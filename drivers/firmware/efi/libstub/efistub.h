@@ -185,6 +185,13 @@ typedef void (__efiapi *efi_event_notify_t)(efi_event_t, void *);
 #define EFI_EVT_RUNTIME		0x40000000U
 #define EFI_EVT_NOTIFY_WAIT	0x00000100U
 #define EFI_EVT_NOTIFY_SIGNAL	0x00000200U
+#define EFI_EVT_SIGNAL_EXIT_BOOT_SERVICES      0x00000201U
+#define EFI_EVT_SIGNAL_VIRTUAL_ADDRESS_CHANGE  0x60000202U
+
+#define EFI_EVT_GROUP_EXIT_BOOT_SERVICES \
+  EFI_GUID(0x27abf055, 0xb1b8, 0x4c26, 0x80, 0x48, 0x74, 0x8f, 0x37, 0xba, 0xa2, 0xdf)
+#define EFI_EVT_MEMORY_MAP_CHANGE  \
+  EFI_GUID(0x78BEE926, 0x692F, 0x48FD, 0x9E, 0xDB, 0x01, 0x42, 0x2E, 0xF0, 0xD7, 0xAB)
 
 /**
  * efi_set_event_at() - add event to events array
@@ -222,8 +229,8 @@ typedef enum {
 union efi_boot_services {
 	struct {
 		efi_table_hdr_t hdr;
-		void *raise_tpl;
-		void *restore_tpl;
+		unsigned long (__efiapi *raise_tpl)(unsigned long);
+		void          (__efiapi *restore_tpl)(unsigned long);
 		efi_status_t (__efiapi *allocate_pages)(int, int, unsigned long,
 							efi_physical_addr_t *);
 		efi_status_t (__efiapi *free_pages)(efi_physical_addr_t,
@@ -242,7 +249,7 @@ union efi_boot_services {
 		efi_status_t (__efiapi *wait_for_event)(unsigned long,
 							efi_event_t *,
 							unsigned long *);
-		void *signal_event;
+		efi_status_t (__efiapi *signal_event)(efi_event_t);
 		efi_status_t (__efiapi *close_event)(efi_event_t);
 		void *check_event;
 		void *install_protocol_interface;
@@ -288,7 +295,12 @@ union efi_boot_services {
 		void *calculate_crc32;
 		void *copy_mem;
 		void *set_mem;
-		void *create_event_ex;
+		efi_status_t (__efiapi *create_event_ex)(u32,
+							 unsigned long,
+							 efi_event_notify_t,
+							 void *,
+							 efi_guid_t *,
+							 efi_event_t *);
 	};
 	struct {
 		efi_table_hdr_t hdr;
