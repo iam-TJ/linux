@@ -109,6 +109,13 @@ static u32 get_supported_rt_services(void)
 
 	return supported;
 }
+static int map_changed_count = 0;
+
+void __efiapi event_memory_map_changed(efi_event_t event, void *context)
+{
+	if (++map_changed_count % 4 == 0)
+		efi_info(">> Memory Map Changed 0x%x <<\n", map_changed_count);
+}
 
 /*
  * EFI entry point for the arm/arm64 EFI stubs.  This is the entrypoint
